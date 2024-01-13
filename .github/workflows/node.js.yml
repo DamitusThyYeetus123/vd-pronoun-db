@@ -1,36 +1,49 @@
-# This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
-
-name: Node.js CI
+name: Build and deploy
 
 on:
-  push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
+    push:
+        branches: [master]
 
 jobs:
-  build:
+    deploy:
+        runs-on: ubuntu-latest
+        permissions:
+          contents: write
 
-    runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v3
 
-    strategy:
-      matrix:
-        node-version: [16.x]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+            - name: Prepare environment
+              uses: actions/setup-node@v3
+              with:
+                  node-version: "16"
 
-    steps:
-    - uses: actions/checkout@v3
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v3
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-    - run: npm i -g pnpm
-    - run: pnpm i
-    - run: pnpm build
-    - name: Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        path: dist/*
-      
+            - run: npm install --global pnpm
+
+            - name: Install deps
+              run: pnpm m i
+
+            - name: Build plugin(s)
+              run: node ./build.mjs
+
+              # Foolproof feature:
+              # - Copies over README so that the root of the deployed website shows it
+              # - Changes 404 page to README so that you don't get lost while clicking links
+              # If you remove this step then you should probably remove the enable_jekyll option in the next one
+            - name: Copy additional files
+              run: |
+                  cp README.md dist/README.md
+                  printf -- "---\npermalink: /404.html\n---\n" > dist/404.md
+                  printf -- "> **Note:** You accessed a link that returned a 404, probably by clicking one of the plugin links. You're supposed to copy the link address and add it into Vendetta.\n\n" >> dist/404.md
+                  cat README.md >> dist/404.md
+
+              # Documentation: https://github.com/peaceiris/actions-gh-pages
+            - name: Deploy to GitHub Pages
+              uses: peaceiris/actions-gh-pages@v3
+              with:
+                  github_token: ${{ secrets.GITHUB_TOKEN }}
+                  publish_dir: ./dist
+                  # Makes it so the md files in the previous step get processed by GitHub Pages
+                  enable_jekyll: true
+                  # This creates the CNAME file required to host GitHub Pages on a custom domain
+                  # cname: example.com

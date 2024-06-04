@@ -93,19 +93,22 @@ export default {
                 headers: { "Accept": "application/json", "X-PronounDB-Source": "Vendetta" }
             })
         ).json()
-
+        const filteredPronounRes = Object.fromEntries(
+            Object
+                .entries(unfilteredPronounRes)
+                .filter(([key, _]) => !isNaN(+key)));
         /**
          * Convert v2 result into v1 result
          */
         var convertedPronounRes = new Map<string, string>();
-        Object.keys(unfilteredPronounRes).forEach((key: string) => {
-            var testIndex = unfilteredPronounRes[key].sets["en"].findIndex((value: string) => ["ask", "any", "avoid", "other"].includes(value));
-            var length = unfilteredPronounRes[key].sets["en"].length;
+        Object.keys(filteredPronounRes).forEach((key: string) => {
+            var testIndex = filteredPronounRes[key].sets["en"].findIndex((value: string) => ["ask", "any", "avoid", "other"].includes(value));
+            var length = filteredPronounRes[key].sets["en"].length;
             if (testIndex >= 0) {
-                convertedPronounRes.set(key, unfilteredPronounRes[key].sets["en"][testIndex]);
+                convertedPronounRes.set(key, filteredPronounRes[key].sets["en"][testIndex]);
             }
             else if (length == 1)  {
-                switch(unfilteredPronounRes[key].sets["en"][0]) {
+                switch(filteredPronounRes[key].sets["en"][0]) {
                     case "she":
                         convertedPronounRes.set(key, "sh");
                         break;
@@ -121,7 +124,7 @@ export default {
                 }
             }
             else if (length == 2) {
-                switch(unfilteredPronounRes[key].sets["en"][0]) {
+                switch(filteredPronounRes[key].sets["en"][0]) {
                     case "she":            
                         switch(unfilteredPronounRes[key].sets["en"][1]) {
                             case "he":
@@ -136,7 +139,7 @@ export default {
                         }
                         break;
                     case "he":
-                        switch(unfilteredPronounRes[key].sets["en"][1]) {
+                        switch(filteredPronounRes[key].sets["en"][1]) {
                             case "she":
                                 convertedPronounRes.set(key, "hs");
                                 break;
@@ -149,7 +152,7 @@ export default {
                         }
                         break;
                     case "they":
-                        switch(unfilteredPronounRes[key].sets["en"][1]) {
+                        switch(filteredPronounRes[key].sets["en"][1]) {
                             case "she":
                                 convertedPronounRes.set(key, "ts");
                                 break;
@@ -162,7 +165,7 @@ export default {
                         }
                         break;
                     case "it":
-                        switch(unfilteredPronounRes[key].sets["en"][1]) {
+                        switch(filteredPronounRes[key].sets["en"][1]) {
                             case "she":
                                 convertedPronounRes.set(key, "is");
                                 break;
@@ -180,11 +183,8 @@ export default {
         /**
          * @filter each pronoun to be only @arg ids which are numbers
          */
-        const filteredPronounRes = Object.fromEntries(
-            Object
-                .entries(convertedPronounRes)
-                .filter(([key, _]) => !isNaN(+key)));
-        Object.assign(this.map, filteredPronounRes)
+
+        Object.assign(this.map, convertedPronounRes)
 
         /**
          * Set @arg fetching back to false, so any new instances will be able to @continue past the first if check.

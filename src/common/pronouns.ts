@@ -88,18 +88,101 @@ export default {
          * Fetch the @arg unfiltered list of @arg pronouns with the @arg ids placed into the template literal string.
          */
         const unfilteredPronounRes = await(
-            await fetch(`https://pronoundb.org/api/v1/lookup-bulk?platform=discord&ids=${ids.join(",")}`, {
+            await fetch(`https://pronoundb.org/api/v2/lookup?platform=discord&ids=${ids.join(",")}`, {
                 method: "GET",
                 headers: { "Accept": "application/json", "X-PronounDB-Source": "Vendetta" }
             })
         ).json()
 
         /**
+         * Convert v2 result into v1 result
+         */
+        var convertedPronounRes = new Map<string, string>();
+        Object.keys(unfilteredPronounRes).forEach((key: string) => {
+            var testIndex = unfilteredPronounRes[key].sets["en"].findIndex((value: string) => ["ask", "any", "avoid", "other"].includes(value));
+            var length = unfilteredPronounRes[key].sets["en"].length;
+            if (testIndex >= 0) {
+                convertedPronounRes.set(key, unfilteredPronounRes[key].sets["en"][testIndex]);
+            }
+            else if (length == 1)  {
+                switch(unfilteredPronounRes[key].sets["en"][0]) {
+                    case "she":
+                        convertedPronounRes.set(key, "sh");
+                        break;
+                    case "he":
+                        convertedPronounRes.set(key, "hh");
+                        break;
+                    case "they":
+                        convertedPronounRes.set(key, "tt");
+                        break;
+                    case "it":
+                        convertedPronounRes.set(key, "ii");
+                        break;
+                }
+            }
+            else if (length == 2) {
+                switch(unfilteredPronounRes[key].sets["en"][0]) {
+                    case "she":            
+                        switch(unfilteredPronounRes[key].sets["en"][1]) {
+                            case "he":
+                                convertedPronounRes.set(key, "shh");
+                                break;
+                            case "they":
+                                convertedPronounRes.set(key, "st");
+                                break;
+                            case "it":
+                                convertedPronounRes.set(key, "si");
+                                break;
+                        }
+                        break;
+                    case "he":
+                        switch(unfilteredPronounRes[key].sets["en"][1]) {
+                            case "she":
+                                convertedPronounRes.set(key, "hs");
+                                break;
+                            case "they":
+                                convertedPronounRes.set(key, "ht");
+                                break;
+                            case "it":
+                                convertedPronounRes.set(key, "hi");
+                                break;
+                        }
+                        break;
+                    case "they":
+                        switch(unfilteredPronounRes[key].sets["en"][1]) {
+                            case "she":
+                                convertedPronounRes.set(key, "ts");
+                                break;
+                            case "he":
+                                convertedPronounRes.set(key, "th");
+                                break;
+                            case "it":
+                                convertedPronounRes.set(key, "ti");
+                                break;
+                        }
+                        break;
+                    case "it":
+                        switch(unfilteredPronounRes[key].sets["en"][1]) {
+                            case "she":
+                                convertedPronounRes.set(key, "is");
+                                break;
+                            case "he":
+                                convertedPronounRes.set(key, "ih");
+                                break;
+                            case "they":
+                                convertedPronounRes.set(key, "it");
+                                break;
+                        }
+                        break;
+                }
+            }
+        });
+        /**
          * @filter each pronoun to be only @arg ids which are numbers
          */
         const filteredPronounRes = Object.fromEntries(
             Object
-                .entries(unfilteredPronounRes)
+                .entries(convertedPronounRes)
                 .filter(([key, _]) => !isNaN(+key)));
         Object.assign(this.map, filteredPronounRes)
 

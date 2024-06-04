@@ -184,7 +184,7 @@ export default {
          * @filter each pronoun to be only @arg ids which are numbers
          */
 
-        this.map = Object.fromEntries(convertedPronounRes)
+        Object.assign(this.map, Object.fromEntries(convertedPronounRes))
 
         /**
          * Set @arg fetching back to false, so any new instances will be able to @continue past the first if check.
